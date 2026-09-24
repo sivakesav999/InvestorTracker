@@ -438,3 +438,75 @@ textarea,
         transform: none;
     }
 }
+
+
+/* React migration: preserve the existing modal appearance while adding a
+   short, subtle entrance/exit motion. The final visual state is unchanged. */
+.react-modal {
+    animation: react-modal-backdrop-in 180ms ease-out both;
+}
+
+.react-modal .modal-box {
+    animation: react-modal-box-in 180ms ease-out both;
+}
+
+.react-modal.is-closing {
+    animation: react-modal-backdrop-out 180ms ease-in both;
+}
+
+.react-modal.is-closing .modal-box {
+    animation: react-modal-box-out 180ms ease-in both;
+}
+
+@keyframes react-modal-backdrop-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes react-modal-box-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes react-modal-backdrop-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes react-modal-box-out {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .react-modal,
+    .react-modal .modal-box,
+    .react-modal.is-closing,
+    .react-modal.is-closing .modal-box {
+        animation: none;
+    }
+}

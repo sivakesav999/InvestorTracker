@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Modal from "./Modal.jsx";
 import { getInvestor, savePayment, saveAllPayments } from "../services/api.js";
 
 function money(value) {
@@ -120,11 +121,8 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div className="modal" style={{ display: "flex" }}>
-      <div className="modal-box wide">
+    <Modal open={open} onClose={onClose} className="wide">
         <div className="modal-head">
           <h2>
             Payments
@@ -191,7 +189,7 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
                         <input
                           type="number"
                           min="0"
-                          value={payment.amountPaid || 0}
+                          value={payment.amountPaid ?? ""}
                           onChange={(event) => updatePayment(id, "amountPaid", event.target.value)}
                           onWheel={preventNumberWheel}
                           disabled={isSavingAll || savingId !== null}
@@ -244,7 +242,6 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

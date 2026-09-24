@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Modal from "./Modal.jsx";
 import { getInvestor, getSchemes, saveInvestor } from "../services/api.js";
 
 function today() {
@@ -133,11 +134,8 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div className="modal" style={{ display: "flex" }}>
-      <div className="modal-box">
+    <Modal open={open} onClose={onClose}>
         <div className="modal-head">
           <h2>{investorId ? `Edit ${form.investorCode || "Investor"}` : "Add Investor"}</h2>
           <button type="button" onClick={onClose} aria-label="Close">
@@ -241,7 +239,6 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
