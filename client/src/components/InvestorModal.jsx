@@ -153,7 +153,6 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
               onChange={(event) => update("name", event.target.value)}
               required
               disabled={isLoading || isSaving}
-              autoFocus
             />
           </label>
 
