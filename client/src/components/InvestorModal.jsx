@@ -18,6 +18,7 @@ function preventNumberWheel(event) {
 
 const EMPTY_FORM = {
   id: "",
+  investorCode: "",
   name: "",
   phone: "",
   address: "",
@@ -57,6 +58,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
         const investor = data.investor;
         setForm({
           id: investor.id || "",
+          investorCode: investor.investorCode || "",
           name: investor.name || "",
           phone: investor.phone || "",
           address: investor.address || "",

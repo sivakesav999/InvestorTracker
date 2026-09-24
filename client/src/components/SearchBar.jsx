@@ -1,4 +1,7 @@
+import { useRef } from "react";
+
 export default function SearchBar({ value, onChange, onSearch, onClear, onAdd }) {
+  const inputRef = useRef(null);
   function handleKeyDown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -14,6 +17,7 @@ export default function SearchBar({ value, onChange, onSearch, onClear, onAdd })
     <section className="toolbar">
       <div className="search-wrap">
         <input
+          ref={inputRef}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={handleKeyDown}
@@ -25,7 +29,10 @@ export default function SearchBar({ value, onChange, onSearch, onClear, onAdd })
         <button
           className="search-clear"
           type="button"
-          onClick={onClear}
+          onClick={() => {
+            onClear();
+            inputRef.current?.focus();
+          }}
           aria-label="Clear search"
           title="Clear search"
           style={{ display: value.trim() ? "block" : "none" }}

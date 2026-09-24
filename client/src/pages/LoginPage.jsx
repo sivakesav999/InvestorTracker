@@ -54,12 +54,8 @@ export default function LoginPage({ onLoginSuccess }) {
 
           <div className="error">{error}</div>
 
-          <button
-            className="btn primary full"
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Signing In..." : "Sign In"}
+          <button className="btn primary full" type="submit">
+            Sign In
           </button>
         </form>
       </div>
