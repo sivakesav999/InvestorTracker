@@ -48,6 +48,7 @@ app.use(
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    rolling: true,
 
     cookie: {
       httpOnly: true,
@@ -71,7 +72,6 @@ function requireAuth(req, res, next) {
     error: "Authentication required",
   });
 }
-
 
 // --------------------------------------------------
 // Login Page
