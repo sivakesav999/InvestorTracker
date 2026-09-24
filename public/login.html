@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Login • Investment Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="login-page">
+    <div class="login-card">
+        <h1>Investment Tracker</h1>
+        <p class="muted">Sign in to manage investors and payments.</p>
+        <form id="loginForm">
+            <label>Username<input id="username" autocomplete="username" required></label>
+            <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+            <div id="error" class="error"></div>
+            <button class="btn primary full">Sign In</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", async e => {
+            e.preventDefault(); document.getElementById("error").textContent = "";
+            const r = await fetch("/api/login", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: username.value, password: password.value })
+            });
+            const j = await r.json();
+            if (r.ok) location.href = "/"; else document.getElementById("error").textContent = j.error || "Login failed";
+        });
+    </script>
+</body>
+
+</html>
