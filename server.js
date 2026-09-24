@@ -25,6 +25,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe123!";
 const SESSION_SECRET =
   process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
+const clientDist = path.join(__dirname, "client", "dist");
+
 if (!MONGODB_URI) {
   console.error("Missing MONGODB_URI environment variable.");
   process.exit(1);
@@ -68,22 +70,10 @@ function requireAuth(req, res, next) {
     return next();
   }
 
-  res.status(401).json({
+  return res.status(401).json({
     error: "Authentication required",
   });
 }
-
-// --------------------------------------------------
-// Login Page
-// --------------------------------------------------
-
-app.get("/login.html", (req, res) => {
-  if (req.session?.authenticated) {
-    return res.redirect("/");
-  }
-
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
 
 // --------------------------------------------------
 // Login API
@@ -101,7 +91,7 @@ app.post("/api/login", (req, res) => {
     });
   }
 
-  res.status(401).json({
+  return res.status(401).json({
     error: "Invalid username or password",
   });
 });
@@ -125,7 +115,6 @@ app.post("/api/logout", (req, res) => {
 app.get("/api/auth", (req, res) => {
   res.json({
     authenticated: !!req.session?.authenticated,
-
     username: req.session?.username || null,
   });
 });
@@ -158,11 +147,9 @@ app.get("/api/dashboard", async (req, res) => {
         {
           $group: {
             _id: null,
-
             n: {
               $sum: 1,
             },
-
             invested: {
               $sum: "$amount",
             },
@@ -174,7 +161,6 @@ app.get("/api/dashboard", async (req, res) => {
         {
           $group: {
             _id: null,
-
             paid: {
               $sum: "$amountPaid",
             },
@@ -188,11 +174,9 @@ app.get("/api/dashboard", async (req, res) => {
             method: "Cash",
           },
         },
-
         {
           $group: {
             _id: null,
-
             v: {
               $sum: "$amountPaid",
             },
@@ -206,11 +190,9 @@ app.get("/api/dashboard", async (req, res) => {
             method: "UPI",
           },
         },
-
         {
           $group: {
             _id: null,
-
             v: {
               $sum: "$amountPaid",
             },
@@ -226,7 +208,6 @@ app.get("/api/dashboard", async (req, res) => {
             },
           },
         },
-
         {
           $match: {
             d: {
@@ -234,11 +215,9 @@ app.get("/api/dashboard", async (req, res) => {
             },
           },
         },
-
         {
           $group: {
             _id: null,
-
             v: {
               $sum: "$d",
             },
@@ -249,15 +228,10 @@ app.get("/api/dashboard", async (req, res) => {
 
     res.json({
       investors: inv[0]?.n || 0,
-
       invested: inv[0]?.invested || 0,
-
       paid: paid[0]?.paid || 0,
-
       cash: cash[0]?.v || 0,
-
       upi: upi[0]?.v || 0,
-
       pending: pending[0]?.v || 0,
     });
   } catch (e) {
@@ -289,41 +263,25 @@ app.get("/api/export", async (req, res) => {
 
     const invRows = investors.map((x) => ({
       investorId: x.investorCode,
-
       name: x.name,
-
       phone: x.phone,
-
       address: x.address,
-
       investmentDate: x.investmentDate,
-
       amount: x.amount,
-
       scheme: x.scheme,
-
       notes: x.notes,
     }));
 
     const payRows = payments.map((p) => ({
       investorId: p.investorId?.investorCode,
-
       name: p.investorId?.name,
-
       scheme: p.investorId?.scheme,
-
       monthNo: p.monthNo,
-
       dueDate: p.dueDate,
-
       amountDue: p.amountDue,
-
       amountPaid: p.amountPaid,
-
       paymentDate: p.paymentDate,
-
       method: p.method,
-
       notes: p.notes,
     }));
 
@@ -331,17 +289,13 @@ app.get("/api/export", async (req, res) => {
 
     XLSX.utils.book_append_sheet(
       wb,
-
       XLSX.utils.json_to_sheet(invRows),
-
       "Investors",
     );
 
     XLSX.utils.book_append_sheet(
       wb,
-
       XLSX.utils.json_to_sheet(payRows),
-
       "Payment Ledger",
     );
 
@@ -368,52 +322,93 @@ app.get("/api/export", async (req, res) => {
 });
 
 // --------------------------------------------------
-// PROTECTED FRONTEND
+// React Production Frontend
 // --------------------------------------------------
 
-// IMPORTANT:
-// These routes must come BEFORE express.static()
-// so unauthenticated users cannot directly open
-// the dashboard.
+// Serve Vite's production build.
+// API routes above always take precedence.
+app.use(express.static(clientDist, { index: false }));
+
+// --------------------------------------------------
+// Root
+// --------------------------------------------------
 
 app.get("/", (req, res) => {
   if (!req.session?.authenticated) {
-    return res.redirect("/login.html");
+    return res.redirect("/login");
   }
 
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  return res.sendFile(path.join(clientDist, "index.html"));
 });
+
+// --------------------------------------------------
+// React Login Route
+// --------------------------------------------------
+
+app.get("/login", (req, res) => {
+  return res.sendFile(path.join(clientDist, "index.html"));
+});
+
+// --------------------------------------------------
+// Legacy Login URL Compatibility
+// --------------------------------------------------
+
+// Prevent old bookmarks/links from opening the legacy login page.
+app.get("/login.html", (req, res) => {
+  if (req.session?.authenticated) {
+    return res.redirect("/");
+  }
+
+  return res.redirect("/login");
+});
+
+// --------------------------------------------------
+// Legacy Index URL Compatibility
+// --------------------------------------------------
 
 app.get("/index.html", (req, res) => {
   if (!req.session?.authenticated) {
-    return res.redirect("/login.html");
+    return res.redirect("/login");
   }
 
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  return res.redirect("/");
 });
 
 // --------------------------------------------------
-// Static Files
+// React SPA Fallback
 // --------------------------------------------------
 
-app.use(express.static(path.join(__dirname, "public")));
-
-// --------------------------------------------------
-// Unknown Routes
-// --------------------------------------------------
-
+// React Router handles client-side routes such as /login.
+// Never use the React fallback for API requests or missing
+// files with extensions.
 app.use((req, res) => {
-  if (!req.session?.authenticated) {
-    return res.redirect("/login.html");
+  if (req.method !== "GET") {
+    return res.status(404).json({
+      error: "Not found",
+    });
   }
 
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({
+      error: "API route not found",
+    });
+  }
+
+  if (path.extname(req.path)) {
+    return res.status(404).end();
+  }
+
+  if (!req.session?.authenticated) {
+    return res.redirect("/login");
+  }
+
+  return res.sendFile(path.join(clientDist, "index.html"));
 });
 
 // --------------------------------------------------
 // Start Server
 // --------------------------------------------------
 
-app.listen(PORT, () =>
-  console.log(`Investment Tracker running on port ${PORT}`),
-);
+app.listen(PORT, () => {
+  console.log(`Investment Tracker running on port ${PORT}`);
+});
