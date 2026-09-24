@@ -55,7 +55,7 @@ function AppRoutes({ auth, setAuth }) {
         path="/"
         element={
           auth.status === "authenticated" ? (
-            <DashboardPage username={auth.username} onLogout={handleLogout} />
+            <DashboardPage onLogout={handleLogout} />
           ) : (
             <Navigate to="/login" replace state={{ from: location }} />
           )
