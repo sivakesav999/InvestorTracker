@@ -5,27 +5,65 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Investment Tracker</title>
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Toastify CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 
 <body>
+
   <header>
     <div>
       <h1>Investment Tracker</h1>
       <!-- <p>Uncle's Business • Investor & Payment Management</p> -->
     </div>
-    <div class="header-actions"><a class="btn light" href="/api/export">Export Excel</a><button class="btn light"
-        onclick="logout()">Logout</button></div>
+
+    <div class="header-actions">
+      <a class="btn light" href="/api/export">Export Excel</a>
+      <button class="btn light" onclick="logout()">Logout</button>
+    </div>
   </header>
+
   <main>
+
     <section class="cards" id="dashboard"></section>
+
+    <!-- Search / Toolbar -->
     <section class="toolbar">
-      <input id="search" placeholder="Search investor name, ID or phone...">
+
+      <div class="search-wrap">
+        <input
+          id="search"
+          placeholder="Search investor name, ID or phone..."
+          autocomplete="off"
+        >
+
+        <button
+          id="clearSearch"
+          class="search-clear"
+          type="button"
+          onclick="clearSearch()"
+          aria-label="Clear search"
+          title="Clear search"
+        >
+          ×
+        </button>
+      </div>
+
       <button class="btn" onclick="loadInvestors()">Search</button>
-      <button class="btn primary" onclick="openNew()">+ Add Investor</button>
+
+      <button class="btn primary" onclick="openNew()">
+        + Add Investor
+      </button>
+
     </section>
+
+    <!-- Investors Table -->
     <section class="panel">
       <div class="table-wrap">
+
         <table>
           <thead>
             <tr>
@@ -40,38 +78,147 @@
               <th>Actions</th>
             </tr>
           </thead>
+
           <tbody id="investors"></tbody>
+
         </table>
+
       </div>
     </section>
+
   </main>
 
+
+  <!-- Investor Modal -->
   <div class="modal" id="modal">
+
     <div class="modal-box">
+
       <div class="modal-head">
-        <h2 id="modalTitle">Investor</h2><button onclick="closeModal()">×</button>
+        <h2 id="modalTitle">Investor</h2>
+        <button onclick="closeModal()">×</button>
       </div>
+
       <form id="investorForm">
+
         <input type="hidden" id="id">
-        <label>Name<input id="name" required></label><label>Phone<input id="phone"></label>
-        <label>Address<textarea id="address"></textarea></label>
-        <div class="grid"><label>Investment Date<input id="investment_date" type="date" required></label><label>Amount
-            Invested<input id="amount" type="number" min="1" required></label></div>
-        <label>Scheme<select id="scheme" required></select></label><label>Notes<textarea id="notes"></textarea></label>
-        <div class="actions"><button type="button" class="btn" onclick="closeModal()">Cancel</button><button
-            class="btn primary">Save Investor</button></div>
+
+        <label>
+          Name
+          <input id="name" required>
+        </label>
+
+        <label>
+          Phone
+          <input
+            id="phone"
+            type="tel"
+            inputmode="numeric"
+            maxlength="10"
+            pattern="[0-9]{10}"
+            autocomplete="tel"
+            placeholder="10-digit phone number"
+          >
+        </label>
+
+        <label>
+          Address
+          <textarea id="address"></textarea>
+        </label>
+
+        <div class="grid">
+
+          <label>
+            Investment Date
+            <input
+              id="investment_date"
+              type="date"
+              required
+            >
+          </label>
+
+          <label>
+            Amount Invested
+            <input
+              id="amount"
+              type="number"
+              min="1"
+              required
+            >
+          </label>
+
+        </div>
+
+        <label>
+          Scheme
+          <select id="scheme" required></select>
+        </label>
+
+        <label>
+          Notes
+          <textarea id="notes"></textarea>
+        </label>
+
+        <div class="actions">
+
+          <button
+            type="button"
+            class="btn"
+            onclick="closeModal()"
+          >
+            Cancel
+          </button>
+
+          <button
+            class="btn primary"
+            type="submit"
+          >
+            Save Investor
+          </button>
+
+        </div>
+
       </form>
+
     </div>
+
   </div>
 
+
+  <!-- Payments Modal -->
   <div class="modal" id="paymentsModal">
+
     <div class="modal-box wide">
+
       <div class="modal-head">
-        <h2 id="paymentTitle">Payments</h2><button onclick="closePayments()">×</button>
+
+        <h2 id="paymentTitle">Payments</h2>
+
+        <div class="payment-head-actions">
+
+          <button
+            id="saveAllPaymentsBtn"
+            class="btn primary"
+            type="button"
+            onclick="saveAllPayments()"
+          >
+            Save All
+          </button>
+
+          <button onclick="closePayments()">
+            ×
+          </button>
+
+        </div>
+
       </div>
+
       <div id="paymentSummary"></div>
+
       <div class="table-wrap">
+
         <table>
+
           <thead>
             <tr>
               <th>Month</th>
@@ -84,12 +231,24 @@
               <th></th>
             </tr>
           </thead>
+
           <tbody id="payments"></tbody>
+
         </table>
+
       </div>
+
     </div>
+
   </div>
+
+
+  <!-- Toastify JS -->
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+  <!-- Application JS -->
   <script src="app.js"></script>
+
 </body>
 
 </html>

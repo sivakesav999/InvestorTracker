@@ -7,6 +7,11 @@ import XLSX from "xlsx";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import Investor from "./models/Investor.js";
+import Payment from "./models/Payment.js";
+
+import paymentRoutes from "./routes/payments.js";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,128 +33,6 @@ if (!MONGODB_URI) {
 
 await mongoose.connect(MONGODB_URI);
 console.log("Connected to MongoDB");
-
-// --------------------------------------------------
-// Investor Schema
-// --------------------------------------------------
-
-const investorSchema = new mongoose.Schema(
-  {
-    investorCode: {
-      type: String,
-      unique: true,
-      index: true,
-    },
-
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-
-    phone: {
-      type: String,
-      default: "",
-      index: true,
-    },
-
-    address: {
-      type: String,
-      default: "",
-    },
-
-    investmentDate: {
-      type: String,
-      required: true,
-    },
-
-    amount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-
-    scheme: {
-      type: String,
-      required: true,
-    },
-
-    notes: {
-      type: String,
-      default: "",
-    },
-  },
-  {
-    timestamps: true,
-  },
-);
-
-// --------------------------------------------------
-// Payment Schema
-// --------------------------------------------------
-
-const paymentSchema = new mongoose.Schema(
-  {
-    investorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Investor",
-      required: true,
-      index: true,
-    },
-
-    monthNo: {
-      type: Number,
-      required: true,
-    },
-
-    dueDate: {
-      type: String,
-    },
-
-    amountDue: {
-      type: Number,
-      default: 0,
-    },
-
-    amountPaid: {
-      type: Number,
-      default: 0,
-    },
-
-    paymentDate: {
-      type: String,
-      default: "",
-    },
-
-    method: {
-      type: String,
-      enum: ["", "Cash", "UPI"],
-      default: "",
-    },
-
-    notes: {
-      type: String,
-      default: "",
-    },
-  },
-  {
-    timestamps: true,
-  },
-);
-
-paymentSchema.index(
-  {
-    investorId: 1,
-    monthNo: 1,
-  },
-  {
-    unique: true,
-  },
-);
-
-const Investor = mongoose.model("Investor", investorSchema);
-const Payment = mongoose.model("Payment", paymentSchema);
 
 // --------------------------------------------------
 // Schemes
@@ -195,6 +78,8 @@ app.use(
     },
   }),
 );
+
+app.use("/api", paymentRoutes);
 
 // --------------------------------------------------
 // Authentication
@@ -664,52 +549,6 @@ app.put("/api/investors/:id", async (req, res) => {
   }
 });
 
-// --------------------------------------------------
-// Update Payment
-// --------------------------------------------------
-
-app.put("/api/payments/:id", async (req, res) => {
-  try {
-    const {
-      amount_paid = 0,
-      payment_date = "",
-      method = "",
-      notes = "",
-    } = req.body;
-
-    if (!["", "Cash", "UPI"].includes(method)) {
-      return res.status(400).json({
-        error: "Payment method must be Cash or UPI",
-      });
-    }
-
-    await Payment.findByIdAndUpdate(
-      req.params.id,
-
-      {
-        amountPaid: Number(amount_paid) || 0,
-
-        paymentDate: payment_date,
-
-        method,
-
-        notes,
-      },
-
-      {
-        runValidators: true,
-      },
-    );
-
-    res.json({
-      ok: true,
-    });
-  } catch (e) {
-    res.status(400).json({
-      error: e.message,
-    });
-  }
-});
 
 // --------------------------------------------------
 // Delete Investor

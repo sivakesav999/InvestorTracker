@@ -1,6 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
 let schemes = [];
+let currentPaymentIds = [];
 
 // ======================================================
 // Utility
@@ -25,6 +26,52 @@ function esc(s) {
         "'": "&#39;",
       })[c],
   );
+}
+
+// ======================================================
+// Toastify
+// ======================================================
+
+function toast(message, type = "success") {
+  if (typeof Toastify !== "function") {
+    console.log(message);
+    return;
+  }
+
+  Toastify({
+    text: message,
+    duration: 3000,
+    close: true,
+    gravity: "top",
+    position: "right",
+    stopOnFocus: true,
+    style: {
+      background: type === "error" ? "#b42318" : "#1769aa",
+      borderRadius: "8px",
+    },
+  }).showToast();
+}
+
+// ======================================================
+// Phone Validation
+// ======================================================
+
+function sanitizePhoneInput(input) {
+  input.value = input.value.replace(/\D/g, "").slice(0, 10);
+}
+
+function validatePhone(phone) {
+  return phone === "" || /^\d{10}$/.test(phone);
+}
+
+// ======================================================
+// Prevent Number Changes With Mouse Wheel
+// ======================================================
+
+function preventNumberWheel(event) {
+  if (document.activeElement === event.target) {
+    event.preventDefault();
+  }
 }
 
 // ======================================================
@@ -72,10 +119,7 @@ async function init() {
     schemes = await api("/api/schemes");
 
     $("scheme").innerHTML = schemes
-      .map(
-        (s) =>
-          `<option value="${esc(s)}">${esc(s)}</option>`,
-      )
+      .map((s) => `<option value="${esc(s)}">${esc(s)}</option>`)
       .join("");
 
     await loadDashboard();
@@ -83,14 +127,12 @@ async function init() {
   } catch (e) {
     console.error(e);
 
-    if (
-      e.message.toLowerCase().includes("authentication")
-    ) {
+    if (e.message.toLowerCase().includes("authentication")) {
       location.href = "/login.html";
       return;
     }
 
-    alert(e.message);
+    toast(e.message, "error");
   }
 }
 
@@ -128,13 +170,9 @@ async function loadDashboard() {
 
 async function loadInvestors() {
   try {
-    const q = encodeURIComponent(
-      $("search").value || "",
-    );
+    const q = encodeURIComponent($("search").value || "");
 
-    const data = await api(
-      "/api/investors?q=" + q,
-    );
+    const data = await api("/api/investors?q=" + q);
 
     $("investors").innerHTML =
       data
@@ -216,7 +254,7 @@ async function loadInvestors() {
       `;
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    toast(e.message, "error");
   }
 }
 
@@ -235,8 +273,7 @@ function openNew() {
   $("address").value = "";
   $("notes").value = "";
 
-  $("investment_date").value =
-    new Date().toISOString().slice(0, 10);
+  $("investment_date").value = new Date().toISOString().slice(0, 10);
 
   $("amount").value = "";
 
@@ -262,20 +299,16 @@ function closeModal() {
 async function editInvestor(id) {
   try {
     if (!id) {
-      alert("Investor ID is missing.");
+      toast("Investor ID is missing.", "error");
       return;
     }
 
-    const x = await api(
-      "/api/investors/" + id,
-    );
+    const x = await api("/api/investors/" + id);
 
     const i = x.investor;
 
-    $("modalTitle").textContent =
-      "Edit " + (i.investorCode || "Investor");
+    $("modalTitle").textContent = "Edit " + (i.investorCode || "Investor");
 
-    // IMPORTANT:
     // Backend returns `id`, not `_id`
     $("id").value = i.id;
 
@@ -285,22 +318,18 @@ async function editInvestor(id) {
 
     $("address").value = i.address || "";
 
-    $("investment_date").value =
-      i.investmentDate || "";
+    $("investment_date").value = i.investmentDate || "";
 
-    $("amount").value =
-      i.amount ?? "";
+    $("amount").value = i.amount ?? "";
 
-    $("scheme").value =
-      i.scheme || "";
+    $("scheme").value = i.scheme || "";
 
-    $("notes").value =
-      i.notes || "";
+    $("notes").value = i.notes || "";
 
     $("modal").style.display = "flex";
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    toast(e.message, "error");
   }
 }
 
@@ -318,8 +347,7 @@ $("investorForm").onsubmit = async (e) => {
 
     address: $("address").value.trim(),
 
-    investment_date:
-      $("investment_date").value,
+    investment_date: $("investment_date").value,
 
     amount: $("amount").value,
 
@@ -330,28 +358,31 @@ $("investorForm").onsubmit = async (e) => {
 
   // Validation
   if (!body.name) {
-    alert("Please enter investor name.");
+    toast("Please enter investor name.", "error");
     $("name").focus();
     return;
   }
 
-  if (
-    !body.amount ||
-    Number(body.amount) <= 0
-  ) {
-    alert("Please enter a valid investment amount.");
+  if (!validatePhone(body.phone)) {
+    toast("Phone number must contain exactly 10 digits.", "error");
+    $("phone").focus();
+    return;
+  }
+
+  if (!body.amount || Number(body.amount) <= 0) {
+    toast("Please enter a valid investment amount.", "error");
     $("amount").focus();
     return;
   }
 
   if (!body.investment_date) {
-    alert("Please select investment date.");
+    toast("Please select investment date.", "error");
     $("investment_date").focus();
     return;
   }
 
   if (!body.scheme) {
-    alert("Please select a scheme.");
+    toast("Please select a scheme.", "error");
     $("scheme").focus();
     return;
   }
@@ -373,15 +404,11 @@ $("investorForm").onsubmit = async (e) => {
     // ============================================
     // UPDATE
     // ============================================
-
     else {
-      await api(
-        "/api/investors/" + id,
-        {
-          method: "PUT",
-          body: JSON.stringify(body),
-        },
-      );
+      await api("/api/investors/" + id, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
     }
 
     closeModal();
@@ -389,14 +416,12 @@ $("investorForm").onsubmit = async (e) => {
     await loadDashboard();
     await loadInvestors();
 
-    alert(
-      id
-        ? "Investor updated successfully."
-        : "Investor added successfully.",
+    toast(
+      id ? "Investor updated successfully." : "Investor added successfully.",
     );
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    toast(e.message, "error");
   }
 };
 
@@ -406,35 +431,28 @@ $("investorForm").onsubmit = async (e) => {
 
 async function removeInvestor(id) {
   if (!id) {
-    alert("Investor ID is missing.");
+    toast("Investor ID is missing.", "error");
     return;
   }
 
-  const confirmed = confirm(
-    "Delete this investor and all payment records?",
-  );
+  const confirmed = confirm("Delete this investor and all payment records?");
 
   if (!confirmed) {
     return;
   }
 
   try {
-    await api(
-      "/api/investors/" + id,
-      {
-        method: "DELETE",
-      },
-    );
+    await api("/api/investors/" + id, {
+      method: "DELETE",
+    });
 
     await loadDashboard();
     await loadInvestors();
 
-    alert(
-      "Investor deleted successfully.",
-    );
+    toast("Investor deleted successfully.");
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    toast(e.message, "error");
   }
 }
 
@@ -445,18 +463,18 @@ async function removeInvestor(id) {
 async function showPayments(id) {
   try {
     if (!id) {
-      alert("Investor ID is missing.");
+      toast("Investor ID is missing.", "error");
       return;
     }
 
-    const x = await api(
-      "/api/investors/" + id,
-    );
+    const x = await api("/api/investors/" + id);
 
     const i = x.investor;
 
-    $("paymentTitle").textContent =
-      `Payments • ${i.investorCode} • ${i.name}`;
+    // Store payment IDs for Save All
+    currentPaymentIds = x.payments.map((p) => String(p._id));
+
+    $("paymentTitle").textContent = `Payments • ${i.investorCode} • ${i.name}`;
 
     $("paymentSummary").innerHTML = `
       <p>
@@ -517,22 +535,14 @@ async function showPayments(id) {
 
                   <option
                     value="Cash"
-                    ${
-                      p.method === "Cash"
-                        ? "selected"
-                        : ""
-                    }
+                    ${p.method === "Cash" ? "selected" : ""}
                   >
                     Cash
                   </option>
 
                   <option
                     value="UPI"
-                    ${
-                      p.method === "UPI"
-                        ? "selected"
-                        : ""
-                    }
+                    ${p.method === "UPI" ? "selected" : ""}
                   >
                     UPI
                   </option>
@@ -573,11 +583,10 @@ async function showPayments(id) {
         </tr>
       `;
 
-    $("paymentsModal").style.display =
-      "flex";
+    $("paymentsModal").style.display = "flex";
   } catch (e) {
     console.error(e);
-    alert(e.message);
+    toast(e.message, "error");
   }
 }
 
@@ -586,69 +595,112 @@ async function showPayments(id) {
 // ======================================================
 
 function closePayments() {
-  $("paymentsModal").style.display =
-    "none";
+  $("paymentsModal").style.display = "none";
+
+  currentPaymentIds = [];
 }
 
 // ======================================================
-// Save Payment
+// Save Individual Payment
 // ======================================================
 
 async function savePayment(id) {
   try {
     if (!id) {
-      alert("Payment ID is missing.");
+      toast("Payment ID is missing.", "error");
       return;
     }
 
-    const amountPaid =
-      Number($("paid-" + id).value) || 0;
+    const amountPaid = Number($("paid-" + id).value) || 0;
 
-    const paymentDate =
-      $("date-" + id).value;
+    const paymentDate = $("date-" + id).value;
 
-    const method =
-      $("method-" + id).value;
+    const method = $("method-" + id).value;
 
-    const notes =
-      $("note-" + id).value;
+    const notes = $("note-" + id).value;
 
-    await api(
-      "/api/payments/" + id,
-      {
-        method: "PUT",
+    await api("/api/payments/" + id, {
+      method: "PUT",
 
-        body: JSON.stringify({
-          amount_paid: amountPaid,
-          payment_date: paymentDate,
-          method: method,
-          notes: notes
-        })
-      }
-    );
+      body: JSON.stringify({
+        amount_paid: amountPaid,
+        payment_date: paymentDate,
+        method: method,
+        notes: notes,
+      }),
+    });
 
-    // ------------------------------------------
-    // Close payment modal immediately
-    // ------------------------------------------
-
-    closePayments();
-
-    // ------------------------------------------
-    // Refresh dashboard
-    // ------------------------------------------
-
+    // Keep payment modal open
     await loadDashboard();
-
-    // ------------------------------------------
-    // Refresh investor table
-    // ------------------------------------------
-
     await loadInvestors();
 
+    toast("Payment saved successfully.");
   } catch (e) {
     console.error(e);
 
-    alert(e.message);
+    toast(e.message, "error");
+  }
+}
+
+// ======================================================
+// Save All Payments
+// ======================================================
+
+async function saveAllPayments() {
+  try {
+    if (!currentPaymentIds.length) {
+      toast("No payment records to save.", "error");
+      return;
+    }
+
+    const payments = currentPaymentIds.map((id) => ({
+      id,
+
+      amount_paid: Number($("paid-" + id).value) || 0,
+
+      payment_date: $("date-" + id).value,
+
+      method: $("method-" + id).value,
+
+      notes: $("note-" + id).value,
+    }));
+
+    // Validate payment methods before sending
+    const invalidMethod = payments.find(
+      (p) => !["", "Cash", "UPI"].includes(p.method),
+    );
+
+    if (invalidMethod) {
+      toast("Payment method must be Cash or UPI.", "error");
+      return;
+    }
+
+    const button = $("saveAllPaymentsBtn");
+
+    const originalText = button.textContent;
+
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    try {
+      await api("/api/payments/bulk", {
+        method: "PUT",
+        body: JSON.stringify({
+          payments,
+        }),
+      });
+
+      await loadDashboard();
+      await loadInvestors();
+
+      toast(`${payments.length} payment entries saved successfully.`);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  } catch (e) {
+    console.error(e);
+    toast(e.message, "error");
   }
 }
 
@@ -656,13 +708,66 @@ async function savePayment(id) {
 // Search
 // ======================================================
 
-$("search").addEventListener(
-  "keydown",
-  (e) => {
-    if (e.key === "Enter") {
-      loadInvestors();
+function updateSearchClear() {
+  const search = $("search");
+
+  const clearButton = $("clearSearch");
+
+  if (!search || !clearButton) {
+    return;
+  }
+
+  clearButton.style.display = search.value.trim() ? "block" : "none";
+}
+
+function clearSearch() {
+  $("search").value = "";
+
+  updateSearchClear();
+
+  loadInvestors();
+
+  $("search").focus();
+}
+
+$("search").addEventListener("input", () => {
+  updateSearchClear();
+});
+
+$("search").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    loadInvestors();
+  }
+
+  if (e.key === "Escape") {
+    clearSearch();
+  }
+});
+
+// ======================================================
+// Phone Input
+// ======================================================
+
+$("phone").addEventListener("input", function () {
+  sanitizePhoneInput(this);
+});
+
+// ======================================================
+// Prevent Amount Mouse Wheel Changes
+// ======================================================
+
+$("amount").addEventListener("wheel", preventNumberWheel, { passive: false });
+
+// Payment amount inputs are created dynamically,
+// so use event delegation.
+document.addEventListener(
+  "wheel",
+  (event) => {
+    if (event.target.matches('input[type="number"]')) {
+      preventNumberWheel(event);
     }
   },
+  { passive: false },
 );
 
 // ======================================================
