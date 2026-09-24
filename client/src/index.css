@@ -388,57 +388,6 @@ textarea,
     opacity: 0.7;
 }
 
-.react-toast {
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    max-width: min(420px, calc(100vw - 32px));
-    padding: 12px 14px;
-    background: #1769aa;
-    color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 10px 24px #173f6730;
-}
-
-.react-toast.error {
-    background: #b42318;
-}
-
-.react-toast button {
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-    padding: 0 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    html {
-        scroll-behavior: auto;
-    }
-
-    .btn,
-    a.btn,
-    input,
-    select,
-    textarea,
-    .search-clear,
-    .modal-head button {
-        transition: none;
-    }
-
-    .btn:hover:not(:disabled),
-    .btn:active:not(:disabled) {
-        transform: none;
-    }
-}
-
 
 /* React migration: preserve the existing modal appearance while adding a
    short, subtle entrance/exit motion. The final visual state is unchanged. */

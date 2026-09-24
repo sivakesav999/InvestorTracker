@@ -152,7 +152,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
               value={form.name}
               onChange={(event) => update("name", event.target.value)}
               required
-              disabled={isLoading || isSaving}
+              disabled={isLoading}
             />
           </label>
 
@@ -167,7 +167,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
               placeholder="10-digit phone number"
               value={form.phone}
               onChange={(event) => update("phone", sanitizePhone(event.target.value))}
-              disabled={isLoading || isSaving}
+              disabled={isLoading}
             />
           </label>
 
@@ -176,7 +176,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
             <textarea
               value={form.address}
               onChange={(event) => update("address", event.target.value)}
-              disabled={isLoading || isSaving}
+              disabled={isLoading}
             />
           </label>
 
@@ -188,7 +188,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
                 value={form.investment_date}
                 onChange={(event) => update("investment_date", event.target.value)}
                 required
-                disabled={isLoading || isSaving}
+                disabled={isLoading}
               />
             </label>
 
@@ -201,7 +201,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
                 onChange={(event) => update("amount", event.target.value)}
                 onWheel={preventNumberWheel}
                 required
-                disabled={isLoading || isSaving}
+                disabled={isLoading}
               />
             </label>
           </div>
@@ -212,7 +212,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
               value={form.scheme}
               onChange={(event) => update("scheme", event.target.value)}
               required
-              disabled={isLoading || isSaving}
+              disabled={isLoading}
             >
               {schemes.map((scheme) => (
                 <option value={scheme} key={scheme}>
@@ -227,7 +227,7 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
             <textarea
               value={form.notes}
               onChange={(event) => update("notes", event.target.value)}
-              disabled={isLoading || isSaving}
+              disabled={isLoading}
             />
           </label>
 
@@ -235,8 +235,8 @@ export default function InvestorModal({ open, investorId, onClose, onSaved, show
             <button className="btn" type="button" onClick={onClose} disabled={isSaving}>
               Cancel
             </button>
-            <button className="btn primary" type="submit" disabled={isLoading || isSaving}>
-              {isSaving ? "Saving..." : "Save Investor"}
+            <button className="btn primary" type="submit">
+              Save Investor
             </button>
           </div>
         </form>

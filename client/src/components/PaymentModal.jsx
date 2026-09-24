@@ -192,7 +192,6 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
                           value={payment.amountPaid ?? ""}
                           onChange={(event) => updatePayment(id, "amountPaid", event.target.value)}
                           onWheel={preventNumberWheel}
-                          disabled={isSavingAll}
                         />
                       </td>
                       <td>
@@ -200,14 +199,12 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
                           type="date"
                           value={payment.paymentDate || ""}
                           onChange={(event) => updatePayment(id, "paymentDate", event.target.value)}
-                          disabled={isSavingAll}
                         />
                       </td>
                       <td>
                         <select
                           value={payment.method || ""}
                           onChange={(event) => updatePayment(id, "method", event.target.value)}
-                          disabled={isSavingAll}
                         >
                           <option value="">--</option>
                           <option value="Cash">Cash</option>
@@ -218,7 +215,6 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
                         <input
                           value={payment.notes || ""}
                           onChange={(event) => updatePayment(id, "notes", event.target.value)}
-                          disabled={isSavingAll}
                         />
                       </td>
                       <td>
@@ -226,7 +222,6 @@ export default function PaymentModal({ open, investorId, onClose, onChanged, sho
                           className="btn small"
                           type="button"
                           onClick={() => handleSave(id)}
-                          disabled={isSavingAll}
                         >
                           Save
                         </button>
