@@ -9,7 +9,7 @@ export default function Header({ onLogout }) {
   return (
     <header>
       <div>
-        <h1 className="header-actions" onClick={() => navigate("/")}>Investment Tracker</h1>
+        <h1>Investment Tracker</h1>
       </div>
 
       <div className="header-actions">

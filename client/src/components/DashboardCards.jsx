@@ -9,7 +9,7 @@ function money(value) {
 export default function DashboardCards({ dashboard }) {
   const items = [
     ["Investors", dashboard?.investors ?? 0],
-    ["Investment", money(dashboard?.invested)],
+    ["Invested", money(dashboard?.invested)],
     ["Paid", money(dashboard?.paid)],
     ["Pending", money(dashboard?.pending)],
     ["Cash", money(dashboard?.cash)],

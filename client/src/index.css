@@ -908,7 +908,6 @@ textarea,
     align-items: center;
     gap: 8px;
     min-height: 44px;
-    margin-bottom: 15px;
 }
 
 
@@ -1263,12 +1262,4 @@ header .header-btn.export-btn {
 
 .table-actions.investor-actions .delete-btn:hover {
     background: #fecaca !important;
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-    .earnings-filter-buttons {
-        justify-content: flex-end;
-        margin-bottom: 15px;
-    }
 }
