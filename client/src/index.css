@@ -318,10 +318,162 @@ input[type="number"] {
     margin: 5px 0;
 }
 
+/* My Earnings */
+.earnings-page-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.earnings-filter-card {
+    margin-bottom: 18px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 15px;
+    align-items: end;
+}
+
+.field {
+    min-width: 0;
+}
+
+.field-button {
+    margin-bottom: 12px;
+}
+
+.earnings-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.stat-label {
+    color: #6c7788;
+    font-size: 13px;
+}
+
+.stat-value {
+    display: block;
+    margin-top: 6px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.stat-note {
+    display: block;
+    margin-top: 5px;
+    color: #718096;
+    font-size: 12px;
+}
+
+.earnings-summary {
+    background: #fff;
+    border: 1px solid #dfe6ef;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.earnings-summary h2 {
+    margin-bottom: 12px;
+}
+
+.earnings-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e7ebf0;
+}
+
+.earnings-summary-row:last-child {
+    border-bottom: 0;
+}
+
+.earnings-note {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #6c7788;
+    font-size: 13px;
+}
+
+/* Completed investor tenure */
+.investor-row-completed td {
+    background: #edf8ee;
+    color: #275d32;
+}
+
+.investor-row-completed .btn {
+    background: #dceedd;
+    color: #275d32;
+}
+
+.completed-message {
+    display: block;
+    margin-top: 4px;
+    color: #2e7d32;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+/* Complimentary payment */
+.status.complimentary {
+    background: #e8eaf6;
+    color: #3949ab;
+}
+
+/* Payment type text */
+.payment-type {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.payment-type.complimentary {
+    color: #3949ab;
+}
+
+.payment-type.normal {
+    color: #6c7788;
+}
+
+.complimentary-note {
+    display: block;
+    margin-top: 3px;
+    color: #3949ab;
+    font-size: 11px;
+    font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .cards {
         grid-template-columns: repeat(3, 1fr);
+    }
+
+    .earnings-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .field-button {
+        margin-bottom: 0;
     }
 }
 
@@ -359,7 +511,19 @@ input[type="number"] {
         width: 100%;
         justify-content: space-between;
     }
+
+    .earnings-page-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .earnings-summary-row {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 5px;
+    }
 }
+
 /* React migration: subtle polish without changing the existing visual design. */
 html {
     scroll-behavior: smooth;
@@ -387,7 +551,6 @@ textarea,
     cursor: default;
     opacity: 0.7;
 }
-
 
 /* React migration: preserve the existing modal appearance while adding a
    short, subtle entrance/exit motion. The final visual state is unchanged. */
@@ -452,10 +615,651 @@ textarea,
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .react-modal,
     .react-modal .modal-box,
     .react-modal.is-closing,
     .react-modal.is-closing .modal-box {
         animation: none;
     }
+}
+
+/* --------------------------------------------------
+   Compact Payment Type Badges
+   -------------------------------------------------- */
+
+.payment-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    padding: 2px 6px;
+    font-size: 10px;
+    line-height: 1.15;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: 999px;
+}
+
+/* Normal payment */
+.payment-type-badge.normal {
+    background: #fff0c2;
+    color: #765800;
+}
+
+/* Complimentary payment */
+.payment-type-badge.complimentary {
+    background: #e5e9ff;
+    color: #3949ab;
+}
+
+/* No payment in investment month */
+.payment-type-badge.no-payment {
+    background: #eeeeee;
+    color: #555555;
+}
+
+/* =========================================================
+   EARNINGS PAGE
+   ========================================================= */
+
+.earnings-page {
+    padding-bottom: 50px;
+}
+
+/* ---------------------------------------------------------
+   Title
+   --------------------------------------------------------- */
+
+.earnings-title {
+    margin-bottom: 20px;
+}
+
+.earnings-title h2 {
+    margin: 0;
+    font-size: 30px;
+    line-height: 1.2;
+    color: #172033;
+}
+
+.earnings-title p {
+    margin: 5px 0 0;
+    color: #667085;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+
+/* ---------------------------------------------------------
+   Main Earnings Cards
+   --------------------------------------------------------- */
+
+.earnings-main-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.earnings-card {
+    position: relative;
+    min-height: 125px;
+    padding: 22px 24px;
+    border: 1px solid;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.earnings-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+}
+
+.earnings-card span {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.earnings-card strong {
+    font-size: 27px;
+    line-height: 1.2;
+    letter-spacing: -0.4px;
+}
+
+
+/* Initial Commission */
+
+.earnings-card-initial {
+    background: #eef5ff;
+    border-color: #c9dcf5;
+    color: #24558a;
+}
+
+.earnings-card-initial::before {
+    background: #4b83c4;
+}
+
+
+/* Monthly Commission */
+
+.earnings-card-monthly {
+    background: #eef9f4;
+    border-color: #c7e5d5;
+    color: #23704c;
+}
+
+.earnings-card-monthly::before {
+    background: #3b9b6d;
+}
+
+
+/* Total Earnings */
+
+.earnings-card-total {
+    background: #fff7e8;
+    border-color: #ead8ad;
+    color: #795c16;
+}
+
+.earnings-card-total::before {
+    background: #d39b2c;
+}
+
+
+/* ---------------------------------------------------------
+   Supporting Information
+   --------------------------------------------------------- */
+
+.earnings-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.earnings-info-card {
+    min-height: 88px;
+    padding: 17px 20px;
+    border-radius: 12px;
+    border: 1px solid;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+.earnings-info-card span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.earnings-info-card strong {
+    font-size: 21px;
+    font-weight: 700;
+}
+
+
+/* Investors */
+
+.earnings-info-investors {
+    background: #f1efff;
+    border-color: #d7d1f2;
+    color: #56469a;
+}
+
+
+/* Paid Monthly Payments */
+
+.earnings-info-payments {
+    background: #eef8fa;
+    border-color: #c9e3e8;
+    color: #287080;
+}
+
+
+/* Period */
+
+.earnings-info-period {
+    background: #f5f2ed;
+    border-color: #ddd6ca;
+    color: #665e53;
+}
+
+
+/* ---------------------------------------------------------
+   Filter Container
+   --------------------------------------------------------- */
+
+.earnings-filter-container {
+    padding: 22px 24px;
+    margin-bottom: 26px;
+    border: 1px solid #cbd9e8;
+    border-radius: 14px;
+    background: #f4f8fc;
+    box-sizing: border-box;
+}
+
+.earnings-section-title {
+    margin-bottom: 18px;
+}
+
+.earnings-section-title h3 {
+    margin: 0;
+    color: #263b55;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.earnings-section-title p {
+    margin: 4px 0 0;
+    color: #718096;
+    font-size: 13px;
+}
+
+.earnings-filter-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 16px;
+}
+
+.earnings-filter-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.earnings-filter-form label span {
+    color: #344054;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.earnings-filter-form input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border: 1px solid #c6d2df;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    outline: none;
+}
+
+.earnings-filter-form input:focus {
+    border-color: #3478b5;
+    box-shadow: 0 0 0 3px rgba(52, 120, 181, 0.12);
+}
+
+.earnings-filter-buttons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+
+/* ---------------------------------------------------------
+   Filter Results
+   --------------------------------------------------------- */
+
+.earnings-results {
+    padding: 22px 24px 24px;
+    border: 1px solid #d8d5ed;
+    border-radius: 14px;
+    background: #faf9ff;
+    box-sizing: border-box;
+}
+
+.earnings-results .earnings-section-title {
+    margin-bottom: 16px;
+}
+
+.earnings-results .earnings-section-title h3 {
+    color: #453b72;
+}
+
+.earnings-result-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.earnings-result-card {
+    min-height: 96px;
+    padding: 17px 20px;
+    border: 1px solid;
+    border-radius: 11px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    box-sizing: border-box;
+}
+
+.earnings-result-card span {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.earnings-result-card strong {
+    font-size: 22px;
+}
+
+
+/* Filter result - Initial */
+
+.result-initial {
+    background: #f2f7ff;
+    border-color: #cbdcf2;
+    color: #315f91;
+}
+
+
+/* Filter result - Monthly */
+
+.result-monthly {
+    background: #f1faf5;
+    border-color: #cce5d6;
+    color: #2c7651;
+}
+
+
+/* Filter result - Total */
+
+.result-total {
+    background: #fff9ed;
+    border-color: #eadcb9;
+    color: #795e1e;
+}
+
+
+/* ---------------------------------------------------------
+   Loading
+   --------------------------------------------------------- */
+
+.earnings-loading {
+    padding: 25px;
+    text-align: center;
+    color: #667085;
+    font-size: 14px;
+}
+
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+    .earnings-main-cards,
+    .earnings-info-grid,
+    .earnings-result-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .earnings-filter-form {
+        grid-template-columns: 1fr;
+    }
+
+    .earnings-filter-buttons {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 600px) {
+    .earnings-title h2 {
+        font-size: 25px;
+    }
+
+    .earnings-card strong {
+        font-size: 23px;
+    }
+
+    .earnings-filter-container,
+    .earnings-results {
+        padding: 18px;
+    }
+}
+
+/* ---------------------------------------------------------
+   Header Buttons
+   --------------------------------------------------------- */
+
+header .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+header .header-btn {
+    height: 42px;
+    min-height: 42px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    line-height: 1;
+    white-space: nowrap;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 9px;
+    text-decoration: none;
+}
+
+header .header-btn.export-btn {
+    padding-left: 17px;
+    padding-right: 17px;
+}
+
+/* --------------------------------------------------
+   Investor Action Buttons
+-------------------------------------------------- */
+
+.investor-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.investor-actions .btn {
+    height: 34px;
+    min-height: 34px;
+    padding: 0 13px;
+    border: 0;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+
+    transition:
+        background-color 0.15s ease,
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+/* Payments */
+.investor-actions .payments-btn {
+    background: #e8f1ff;
+    color: #1769aa;
+}
+
+.investor-actions .payments-btn:hover {
+    background: #d7e8ff;
+    box-shadow: 0 2px 6px rgba(23, 105, 170, 0.15);
+}
+
+/* Edit */
+.investor-actions .edit-btn {
+    background: #eeeaff;
+    color: #5b45c4;
+}
+
+.investor-actions .edit-btn:hover {
+    background: #e2dcff;
+    box-shadow: 0 2px 6px rgba(91, 69, 196, 0.15);
+}
+
+/* Delete */
+.investor-actions .delete-btn {
+    background: #fff0eb;
+    color: #d9534f;
+}
+
+.investor-actions .delete-btn:hover {
+    background: #ffe1da;
+    box-shadow: 0 2px 6px rgba(217, 83, 79, 0.15);
+}
+
+.investor-actions .btn:hover {
+    transform: translateY(-1px);
+}
+
+.investor-actions .btn:active {
+    transform: translateY(0);
+}
+
+/* --------------------------------------------------
+   Compact Investor Action Buttons
+-------------------------------------------------- */
+
+.investor-actions {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 2px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap;
+}
+
+.investor-actions .btn {
+    margin: 0 !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 12px !important;
+    border: 0 !important;
+    border-radius: 7px !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    transition:
+        transform 0.15s ease,
+        filter 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+/* Payments */
+.investor-actions .payments-btn {
+    background: #dbeafe !important;
+    color: #155eaa !important;
+}
+
+/* Edit */
+.investor-actions .edit-btn {
+    background: #e9d5ff !important;
+    color: #6b21a8 !important;
+}
+
+/* Delete */
+.investor-actions .delete-btn {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+}
+
+/* Hover */
+.investor-actions .btn:hover {
+    filter: brightness(0.96);
+    transform: translateY(-1px);
+}
+
+.investor-actions .btn:active {
+    transform: translateY(0);
+}
+
+/* --------------------------------------------------
+   Investor Table Action Buttons
+-------------------------------------------------- */
+
+.table-actions.investor-actions {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 2px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    white-space: nowrap;
+}
+
+.table-actions.investor-actions .btn {
+    margin: 0 !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 12px !important;
+
+    border: 0 !important;
+    border-radius: 7px !important;
+
+    font-size: 13px !important;
+    font-weight: 600 !important;
+
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+
+    box-shadow: none !important;
+}
+
+/* Payments - Blue */
+.table-actions.investor-actions .payments-btn {
+    background: #dbeafe !important;
+    color: #155eaa !important;
+}
+
+/* Edit - Purple */
+.table-actions.investor-actions .edit-btn {
+    background: #ede9fe !important;
+    color: #6d28d9 !important;
+}
+
+/* Delete - Red */
+.table-actions.investor-actions .delete-btn {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+}
+
+/* Hover */
+.table-actions.investor-actions .payments-btn:hover {
+    background: #bfdbfe !important;
+}
+
+.table-actions.investor-actions .edit-btn:hover {
+    background: #ddd6fe !important;
+}
+
+.table-actions.investor-actions .delete-btn:hover {
+    background: #fecaca !important;
 }

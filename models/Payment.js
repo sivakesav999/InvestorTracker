@@ -46,10 +46,17 @@ const paymentSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+
+    // True only for the first complimentary payment
+    // when investment date is after the 15th.
+    isComplimentary: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 paymentSchema.index(
@@ -59,7 +66,7 @@ paymentSchema.index(
   },
   {
     unique: true,
-  }
+  },
 );
 
 const Payment = mongoose.model("Payment", paymentSchema);

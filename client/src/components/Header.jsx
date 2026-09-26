@@ -1,13 +1,10 @@
-import { logout } from "../services/api.js";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Header({ onLogout }) {
-  async function handleLogout() {
-    try {
-      await logout();
-    } finally {
-      onLogout();
-    }
-  }
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isEarningsPage = location.pathname === "/earnings";
 
   return (
     <header>
@@ -16,11 +13,23 @@ export default function Header({ onLogout }) {
       </div>
 
       <div className="header-actions">
-        <a className="btn light" href="/api/export">
+        <button
+          type="button"
+          className="btn light header-btn"
+          onClick={() => navigate(isEarningsPage ? "/" : "/earnings")}
+        >
+          {isEarningsPage ? "Home" : "My Earnings"}
+        </button>
+
+        <a className="btn light header-btn export-btn" href="/api/export">
           Export Excel
         </a>
 
-        <button className="btn light" type="button" onClick={handleLogout}>
+        <button
+          type="button"
+          className="btn light header-btn"
+          onClick={onLogout}
+        >
           Logout
         </button>
       </div>

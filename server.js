@@ -12,35 +12,43 @@ import Payment from "./models/Payment.js";
 
 import paymentRoutes from "./routes/payments.js";
 import investorRoutes from "./routes/investors.js";
+import earningsRoutes from "./routes/earnings.js";
 
 import { schemes } from "./utils/investment.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const app = express();
+
 const PORT = process.env.PORT || 3000;
 
 const MONGODB_URI = process.env.MONGODB_URI;
+
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
+
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "ChangeMe123!";
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
 
 const clientDist = path.join(__dirname, "client", "dist");
 
+// --------------------------------------------------
+// DATABASE
+// --------------------------------------------------
+
 if (!MONGODB_URI) {
   console.error("Missing MONGODB_URI environment variable.");
+
   process.exit(1);
 }
 
-// --------------------------------------------------
-// MongoDB
-// --------------------------------------------------
-
 await mongoose.connect(MONGODB_URI);
+
 console.log("Connected to MongoDB");
 
 // --------------------------------------------------
-// Middleware
+// MIDDLEWARE
 // --------------------------------------------------
 
 app.use(express.json());
@@ -48,21 +56,27 @@ app.use(express.json());
 app.use(
   session({
     secret: SESSION_SECRET,
+
     resave: false,
+
     saveUninitialized: false,
+
     rolling: true,
 
     cookie: {
       httpOnly: true,
+
       sameSite: "lax",
+
       secure: process.env.NODE_ENV === "production",
+
       maxAge: 1000 * 60 * 60 * 8,
     },
   }),
 );
 
 // --------------------------------------------------
-// Authentication
+// AUTH MIDDLEWARE
 // --------------------------------------------------
 
 function requireAuth(req, res, next) {
@@ -76,7 +90,7 @@ function requireAuth(req, res, next) {
 }
 
 // --------------------------------------------------
-// Login API
+// LOGIN
 // --------------------------------------------------
 
 app.post("/api/login", (req, res) => {
@@ -84,6 +98,7 @@ app.post("/api/login", (req, res) => {
 
   if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
     req.session.authenticated = true;
+
     req.session.username = username;
 
     return res.json({
@@ -97,7 +112,7 @@ app.post("/api/login", (req, res) => {
 });
 
 // --------------------------------------------------
-// Logout
+// LOGOUT
 // --------------------------------------------------
 
 app.post("/api/logout", (req, res) => {
@@ -109,35 +124,39 @@ app.post("/api/logout", (req, res) => {
 });
 
 // --------------------------------------------------
-// Authentication Check
+// AUTH STATUS
 // --------------------------------------------------
 
 app.get("/api/auth", (req, res) => {
   res.json({
     authenticated: !!req.session?.authenticated,
+
     username: req.session?.username || null,
   });
 });
 
 // --------------------------------------------------
-// Protect All API Routes
+// PROTECTED API
 // --------------------------------------------------
 
 app.use("/api", requireAuth);
 
 app.use("/api", paymentRoutes);
+
 app.use("/api", investorRoutes);
 
+app.use("/api", earningsRoutes);
+
 // --------------------------------------------------
-// Schemes API
+// SCHEMES
 // --------------------------------------------------
 
 app.get("/api/schemes", (req, res) => {
-  res.json(Object.keys(schemes));
+  res.json(schemes);
 });
 
 // --------------------------------------------------
-// Dashboard
+// DASHBOARD
 // --------------------------------------------------
 
 app.get("/api/dashboard", async (req, res) => {
@@ -147,9 +166,11 @@ app.get("/api/dashboard", async (req, res) => {
         {
           $group: {
             _id: null,
+
             n: {
               $sum: 1,
             },
+
             invested: {
               $sum: "$amount",
             },
@@ -161,6 +182,7 @@ app.get("/api/dashboard", async (req, res) => {
         {
           $group: {
             _id: null,
+
             paid: {
               $sum: "$amountPaid",
             },
@@ -174,9 +196,11 @@ app.get("/api/dashboard", async (req, res) => {
             method: "Cash",
           },
         },
+
         {
           $group: {
             _id: null,
+
             v: {
               $sum: "$amountPaid",
             },
@@ -190,9 +214,11 @@ app.get("/api/dashboard", async (req, res) => {
             method: "UPI",
           },
         },
+
         {
           $group: {
             _id: null,
+
             v: {
               $sum: "$amountPaid",
             },
@@ -208,6 +234,7 @@ app.get("/api/dashboard", async (req, res) => {
             },
           },
         },
+
         {
           $match: {
             d: {
@@ -215,9 +242,11 @@ app.get("/api/dashboard", async (req, res) => {
             },
           },
         },
+
         {
           $group: {
             _id: null,
+
             v: {
               $sum: "$d",
             },
@@ -228,10 +257,15 @@ app.get("/api/dashboard", async (req, res) => {
 
     res.json({
       investors: inv[0]?.n || 0,
+
       invested: inv[0]?.invested || 0,
+
       paid: paid[0]?.paid || 0,
+
       cash: cash[0]?.v || 0,
+
       upi: upi[0]?.v || 0,
+
       pending: pending[0]?.v || 0,
     });
   } catch (e) {
@@ -242,7 +276,7 @@ app.get("/api/dashboard", async (req, res) => {
 });
 
 // --------------------------------------------------
-// Excel Export
+// EXCEL EXPORT
 // --------------------------------------------------
 
 app.get("/api/export", async (req, res) => {
@@ -263,25 +297,43 @@ app.get("/api/export", async (req, res) => {
 
     const invRows = investors.map((x) => ({
       investorId: x.investorCode,
+
       name: x.name,
+
       phone: x.phone,
+
       address: x.address,
+
       investmentDate: x.investmentDate,
+
       amount: x.amount,
+
       scheme: x.scheme,
+
       notes: x.notes,
     }));
 
     const payRows = payments.map((p) => ({
       investorId: p.investorId?.investorCode,
+
       name: p.investorId?.name,
+
       scheme: p.investorId?.scheme,
+
       monthNo: p.monthNo,
+
       dueDate: p.dueDate,
+
       amountDue: p.amountDue,
+
       amountPaid: p.amountPaid,
+
       paymentDate: p.paymentDate,
+
       method: p.method,
+
+      isComplimentary: p.isComplimentary ? "Yes" : "No",
+
       notes: p.notes,
     }));
 
@@ -289,13 +341,17 @@ app.get("/api/export", async (req, res) => {
 
     XLSX.utils.book_append_sheet(
       wb,
+
       XLSX.utils.json_to_sheet(invRows),
+
       "Investors",
     );
 
     XLSX.utils.book_append_sheet(
       wb,
+
       XLSX.utils.json_to_sheet(payRows),
+
       "Payment Ledger",
     );
 
@@ -322,15 +378,17 @@ app.get("/api/export", async (req, res) => {
 });
 
 // --------------------------------------------------
-// React Production Frontend
+// STATIC REACT BUILD
 // --------------------------------------------------
 
-// Serve Vite's production build.
-// API routes above always take precedence.
-app.use(express.static(clientDist, { index: false }));
+app.use(
+  express.static(clientDist, {
+    index: false,
+  }),
+);
 
 // --------------------------------------------------
-// Root
+// ROOT
 // --------------------------------------------------
 
 app.get("/", (req, res) => {
@@ -342,18 +400,13 @@ app.get("/", (req, res) => {
 });
 
 // --------------------------------------------------
-// React Login Route
+// LOGIN PAGE
 // --------------------------------------------------
 
 app.get("/login", (req, res) => {
   return res.sendFile(path.join(clientDist, "index.html"));
 });
 
-// --------------------------------------------------
-// Legacy Login URL Compatibility
-// --------------------------------------------------
-
-// Prevent old bookmarks/links from opening the legacy login page.
 app.get("/login.html", (req, res) => {
   if (req.session?.authenticated) {
     return res.redirect("/");
@@ -363,7 +416,7 @@ app.get("/login.html", (req, res) => {
 });
 
 // --------------------------------------------------
-// Legacy Index URL Compatibility
+// INDEX.HTML
 // --------------------------------------------------
 
 app.get("/index.html", (req, res) => {
@@ -375,12 +428,9 @@ app.get("/index.html", (req, res) => {
 });
 
 // --------------------------------------------------
-// React SPA Fallback
+// SPA FALLBACK
 // --------------------------------------------------
 
-// React Router handles client-side routes such as /login.
-// Never use the React fallback for API requests or missing
-// files with extensions.
 app.use((req, res) => {
   if (req.method !== "GET") {
     return res.status(404).json({
@@ -406,7 +456,7 @@ app.use((req, res) => {
 });
 
 // --------------------------------------------------
-// Start Server
+// START SERVER
 // --------------------------------------------------
 
 app.listen(PORT, () => {

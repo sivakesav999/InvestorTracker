@@ -1,6 +1,4 @@
 import express from "express";
-import mongoose from "mongoose";
-
 import Investor from "../models/Investor.js";
 import Payment from "../models/Payment.js";
 
@@ -10,12 +8,15 @@ import {
   nextInvestorCode,
   createPayments,
   investorView,
+  adjustedDuration,
+  paymentDetails,
+  isAfter15th,
 } from "../utils/investment.js";
 
 const router = express.Router();
 
 // --------------------------------------------------
-// Get Investors
+// GET ALL INVESTORS
 // --------------------------------------------------
 
 router.get("/investors", async (req, res) => {
@@ -31,14 +32,12 @@ router.get("/investors", async (req, res) => {
                 $options: "i",
               },
             },
-
             {
               name: {
                 $regex: q,
                 $options: "i",
               },
             },
-
             {
               phone: {
                 $regex: q,
@@ -55,8 +54,12 @@ router.get("/investors", async (req, res) => {
       })
       .lean();
 
-    res.json(await Promise.all(rows.map(investorView)));
+    const investors = rows.map((row) => investorView(row));
+
+    res.json(investors);
   } catch (e) {
+    console.error("Get investors error:", e);
+
     res.status(500).json({
       error: e.message,
     });
@@ -64,7 +67,7 @@ router.get("/investors", async (req, res) => {
 });
 
 // --------------------------------------------------
-// Get Single Investor + Payments
+// GET SINGLE INVESTOR + PAYMENTS
 // --------------------------------------------------
 
 router.get("/investors/:id", async (req, res) => {
@@ -77,7 +80,7 @@ router.get("/investors/:id", async (req, res) => {
       });
     }
 
-    const investor = await investorView(row);
+    const investor = investorView(row);
 
     const payments = await Payment.find({
       investorId: row._id,
@@ -92,6 +95,8 @@ router.get("/investors/:id", async (req, res) => {
       payments,
     });
   } catch (e) {
+    console.error("Get investor error:", e);
+
     res.status(500).json({
       error: e.message,
     });
@@ -99,7 +104,7 @@ router.get("/investors/:id", async (req, res) => {
 });
 
 // --------------------------------------------------
-// Create Investor
+// CREATE INVESTOR
 // --------------------------------------------------
 
 router.post("/investors", async (req, res) => {
@@ -122,33 +127,42 @@ router.post("/investors", async (req, res) => {
       });
     }
 
+    const numericAmount = Number(amount);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({
+        error: "Amount must be greater than 0",
+      });
+    }
+
     const investor = new Investor({
       investorCode: await nextInvestorCode(Investor),
-
       name,
-
       phone,
-
       address,
-
       investmentDate: investment_date,
 
-      amount: Number(amount),
+      // Store total amount received.
+      // Actual investment is calculated inside investment.js.
+      amount: numericAmount,
 
       scheme,
-
       notes,
     });
 
     await investor.save();
 
-    await createPayments(investor);
+    // Creates the schedule using the business rules
+    // from investment.js.
+    await createPayments(investor, Payment);
 
     res.json({
       ok: true,
       id: investor._id,
     });
   } catch (e) {
+    console.error("Create investor error:", e);
+
     res.status(400).json({
       error: e.message,
     });
@@ -156,7 +170,171 @@ router.post("/investors", async (req, res) => {
 });
 
 // --------------------------------------------------
-// Update Investor
+// SYNCHRONIZE INVESTOR PAYMENT SCHEDULE
+// --------------------------------------------------
+
+async function synchronizePayments(investor) {
+  const duration = adjustedDuration(investor.investmentDate, investor.scheme);
+
+  /*
+    Backward-compatible function name from investment.js.
+
+    Its current meaning is:
+
+      investment date > 25th
+  */
+  const after25th = isAfter15th(investor.investmentDate);
+
+  const existingPayments = await Payment.find({
+    investorId: investor._id,
+  })
+    .sort({
+      monthNo: 1,
+    })
+    .lean();
+
+  const paymentMap = new Map(
+    existingPayments.map((payment) => [payment.monthNo, payment]),
+  );
+
+  const operations = [];
+
+  for (let month = 1; month <= duration; month += 1) {
+    const dueDate = addMonths(investor.investmentDate, month - 1);
+
+    const details = paymentDetails(
+      investor.investmentDate,
+      investor.scheme,
+      investor.amount,
+      month,
+    );
+
+    const existingPayment = paymentMap.get(month);
+
+    // ------------------------------------------------
+    // AFTER-25TH INVESTMENT MONTH
+    // ------------------------------------------------
+    //
+    // Month 1 is a genuine "No Payment" month.
+    //
+    // Reset any old payment that may have been entered.
+    // ------------------------------------------------
+
+    const isNoPaymentMonth = after25th && month === 1;
+
+    if (existingPayment) {
+      if (isNoPaymentMonth) {
+        operations.push({
+          updateOne: {
+            filter: {
+              _id: existingPayment._id,
+            },
+
+            update: {
+              $set: {
+                dueDate,
+                amountDue: details.amountDue,
+                isComplimentary: false,
+
+                // Clear the old automatic "No Payment" note
+                // when this becomes a normal payment month.
+                notes: details.noPayment
+                  ? "No payment in investment month - investment made after 25th"
+                  : "",
+              },
+            },
+          },
+        });
+      } else {
+        /*
+          IMPORTANT:
+
+          Recalculate amountDue every time.
+
+          This handles both:
+
+            1. Amount changes
+
+            Example:
+
+              Old:
+                Received = ₹5,50,000
+                Due = ₹11,000
+
+              New:
+                Actual investment = ₹5,00,000
+                Due = ₹10,000
+
+            2. Investment date changes
+
+            Example:
+
+              20th:
+                First month = 2%
+
+              10th:
+                First month = selected scheme rate
+
+          Historical payment information is preserved.
+        */
+
+        operations.push({
+          updateOne: {
+            filter: {
+              _id: existingPayment._id,
+            },
+
+            update: {
+              $set: {
+                dueDate,
+                amountDue: details.amountDue,
+                isComplimentary: false,
+
+                /*
+                  If the payment is the 16th–25th
+                  investment-month payment, paymentDetails()
+                  has already calculated the 2% amount.
+
+                  We therefore do not need special handling here.
+                */
+              },
+            },
+          },
+        });
+      }
+    } else {
+      // Create missing payment row.
+      operations.push({
+        insertOne: {
+          document: {
+            investorId: investor._id,
+            monthNo: month,
+            dueDate,
+
+            amountDue: isNoPaymentMonth ? 0 : details.amountDue,
+
+            amountPaid: 0,
+            paymentDate: "",
+            method: "",
+
+            notes: isNoPaymentMonth
+              ? "No payment in investment month - investment made after 25th"
+              : "",
+
+            isComplimentary: false,
+          },
+        },
+      });
+    }
+  }
+
+  if (operations.length > 0) {
+    await Payment.bulkWrite(operations);
+  }
+}
+
+// --------------------------------------------------
+// UPDATE INVESTOR
 // --------------------------------------------------
 
 router.put("/investors/:id", async (req, res) => {
@@ -175,13 +353,17 @@ router.put("/investors/:id", async (req, res) => {
 
     const newAmount = Number(amount);
 
-    if (!name || !investment_date || !newAmount) {
+    if (
+      !name ||
+      !investment_date ||
+      !Number.isFinite(newAmount) ||
+      newAmount <= 0
+    ) {
       return res.status(400).json({
         error: "Name, investment date and amount are required",
       });
     }
 
-    // Get the existing investor first
     const existingInvestor = await Investor.findById(req.params.id);
 
     if (!existingInvestor) {
@@ -190,13 +372,7 @@ router.put("/investors/:id", async (req, res) => {
       });
     }
 
-    // Check whether the payment schedule itself changed
-    const scheduleChanged =
-      existingInvestor.amount !== newAmount ||
-      existingInvestor.scheme !== scheme ||
-      existingInvestor.investmentDate !== investment_date;
-
-    // Update investor information
+    // Update investor information.
     existingInvestor.name = name;
     existingInvestor.phone = phone;
     existingInvestor.address = address;
@@ -207,83 +383,46 @@ router.put("/investors/:id", async (req, res) => {
 
     await existingInvestor.save();
 
-    // If only personal/details fields changed,
-    // do NOT touch payment records.
-    if (!scheduleChanged) {
-      return res.json({
-        ok: true,
-        paymentsUpdated: false,
-      });
-    }
+    /*
+      ALWAYS synchronize the payment schedule.
 
-    // --------------------------------------------------
-    // Payment schedule changed
-    // Preserve existing payment history
-    // --------------------------------------------------
+      This is important because existing investors may
+      have been created using the old calculation.
 
-    const info = schemeInfo(existingInvestor.scheme);
+      Example:
 
-    const existingPayments = await Payment.find({
-      investorId: existingInvestor._id,
-    }).lean();
+        Old:
+          Received = ₹5,50,000
+          Due = ₹11,000
 
-    const paymentMap = new Map(
-      existingPayments.map((payment) => [payment.monthNo, payment]),
-    );
+        New:
+          Actual investment = ₹5,00,000
+          Due = ₹10,000
 
-    const operations = [];
+      It also corrects old investment-date rules.
 
-    for (let month = 1; month <= info.months; month++) {
-      const dueDate = addMonths(existingInvestor.investmentDate, month - 1);
+      Example:
 
-      const amountDue = existingInvestor.amount * info.rate;
+        Investment date = 20th
 
-      const existingPayment = paymentMap.get(month);
+        New first-month rule:
+          2%
 
-      if (existingPayment) {
-        // Keep payment history.
-        // Only update the new schedule information.
-        operations.push({
-          updateOne: {
-            filter: {
-              _id: existingPayment._id,
-            },
-            update: {
-              $set: {
-                dueDate,
-                amountDue,
-              },
-            },
-          },
-        });
-      } else {
-        // Create a missing future payment record.
-        operations.push({
-          insertOne: {
-            document: {
-              investorId: existingInvestor._id,
-              monthNo: month,
-              dueDate,
-              amountDue,
-              amountPaid: 0,
-              paymentDate: "",
-              method: "",
-              notes: "",
-            },
-          },
-        });
-      }
-    }
+      Investment date = 26th
 
-    if (operations.length) {
-      await Payment.bulkWrite(operations);
-    }
+        New first-month rule:
+          ₹0
+    */
+
+    await synchronizePayments(existingInvestor);
 
     res.json({
       ok: true,
       paymentsUpdated: true,
     });
   } catch (e) {
+    console.error("Update investor error:", e);
+
     res.status(400).json({
       error: e.message,
     });
@@ -291,7 +430,7 @@ router.put("/investors/:id", async (req, res) => {
 });
 
 // --------------------------------------------------
-// Delete Investor
+// DELETE INVESTOR
 // --------------------------------------------------
 
 router.delete("/investors/:id", async (req, res) => {
@@ -306,6 +445,8 @@ router.delete("/investors/:id", async (req, res) => {
       ok: true,
     });
   } catch (e) {
+    console.error("Delete investor error:", e);
+
     res.status(400).json({
       error: e.message,
     });

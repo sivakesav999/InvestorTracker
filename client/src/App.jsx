@@ -11,7 +11,9 @@ import {
 
 import LoginPage from "./pages/LoginPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
-import { getAuth } from "./services/api.js";
+import EarningsPage from "./pages/EarningsPage.jsx";
+
+import { getAuth, logout } from "./services/api.js";
 
 function HomeBackGuard({ enabled }) {
   const restoringHistory = useRef(false);
@@ -55,7 +57,6 @@ function HomeBackGuard({ enabled }) {
       }
 
       restoringHistory.current = true;
-
       window.history.forward();
     }
 
@@ -89,21 +90,25 @@ function AppRoutes({ auth, setAuth }) {
     });
   }
 
-  function handleLogout() {
-    // Clear React Query memory cache
-    queryClient.clear();
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      queryClient.clear();
 
-    // Clear persisted React Query cache
-    window.localStorage.removeItem("investment-tracker-query-cache");
+      window.localStorage.removeItem("investment-tracker-query-cache");
 
-    setAuth({
-      status: "unauthenticated",
-      username: null,
-    });
+      setAuth({
+        status: "unauthenticated",
+        username: null,
+      });
 
-    navigate("/login", {
-      replace: true,
-    });
+      navigate("/login", {
+        replace: true,
+      });
+    }
   }
 
   const isAuthenticatedHome =
@@ -130,6 +135,17 @@ function AppRoutes({ auth, setAuth }) {
           element={
             auth.status === "authenticated" ? (
               <DashboardPage onLogout={handleLogout} />
+            ) : (
+              <Navigate to="/login" replace state={{ from: location }} />
+            )
+          }
+        />
+
+        <Route
+          path="/earnings"
+          element={
+            auth.status === "authenticated" ? (
+              <EarningsPage onLogout={handleLogout} />
             ) : (
               <Navigate to="/login" replace state={{ from: location }} />
             )

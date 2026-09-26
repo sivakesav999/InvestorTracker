@@ -104,6 +104,23 @@ export default function DashboardPage({ onLogout }) {
   // =====================================================
   // Refresh Data
   // =====================================================
+  //
+  // IMPORTANT:
+  //
+  // Investor/payment changes can affect:
+  //
+  // 1. Dashboard
+  // 2. Investor list
+  // 3. My Earnings
+  //
+  // "earnings" is used as a prefix so this invalidates:
+  //
+  // ["earnings"]
+  // ["earnings", "", ""]
+  // ["earnings", "2026-09-01", "2026-09-26"]
+  // etc.
+  //
+  // =====================================================
 
   async function refreshData() {
     await Promise.all([
@@ -113,6 +130,10 @@ export default function DashboardPage({ onLogout }) {
 
       queryClient.invalidateQueries({
         queryKey: ["investors"],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: ["earnings"],
       }),
     ]);
   }
