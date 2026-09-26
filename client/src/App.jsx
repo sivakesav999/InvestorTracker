@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BrowserRouter,
   Navigate,
@@ -20,16 +21,6 @@ function HomeBackGuard({ enabled }) {
       return undefined;
     }
 
-    /*
-     * Create TWO Home entries.
-     *
-     * We need two entries because if there were only one,
-     * pressing Back could leave the React document entirely
-     * before popstate had a chance to handle it.
-     *
-     * React StrictMode runs effects twice in development.
-     * Checking the history state prevents duplicate entries.
-     */
     const currentState = window.history.state || {};
 
     if (currentState.investmentTrackerHomeGuard !== 2) {
@@ -58,12 +49,6 @@ function HomeBackGuard({ enabled }) {
     }
 
     function handlePopState() {
-      /*
-       * The first Back moves from Home Guard #2
-       * to Home Guard #1.
-       *
-       * Move forward again to Home Guard #2.
-       */
       if (restoringHistory.current) {
         restoringHistory.current = false;
         return;
@@ -87,14 +72,7 @@ function HomeBackGuard({ enabled }) {
 function AppRoutes({ auth, setAuth }) {
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (auth.status === "checking") {
-      return undefined;
-    }
-
-    return undefined;
-  }, [auth.status]);
+  const queryClient = useQueryClient();
 
   if (auth.status === "checking") {
     return null;
@@ -112,6 +90,12 @@ function AppRoutes({ auth, setAuth }) {
   }
 
   function handleLogout() {
+    // Clear React Query memory cache
+    queryClient.clear();
+
+    // Clear persisted React Query cache
+    window.localStorage.removeItem("investment-tracker-query-cache");
+
     setAuth({
       status: "unauthenticated",
       username: null,

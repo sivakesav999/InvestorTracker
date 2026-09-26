@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import Header from "../components/Header.jsx";
 import DashboardCards from "../components/DashboardCards.jsx";
 import SearchBar from "../components/SearchBar.jsx";
@@ -6,90 +8,124 @@ import InvestorTable from "../components/InvestorTable.jsx";
 import InvestorModal from "../components/InvestorModal.jsx";
 import PaymentModal from "../components/PaymentModal.jsx";
 import Toast from "../components/Toast.jsx";
+
 import { deleteInvestor, getDashboard, getInvestors } from "../services/api.js";
 
 function AppToast({ value, onClose }) {
   if (!value) return null;
+
   return <Toast toast={{ ...value, onClose }} />;
 }
 
 export default function DashboardPage({ onLogout }) {
-  const [dashboard, setDashboard] = useState(null);
-  const [investors, setInvestors] = useState([]);
+  const queryClient = useQueryClient();
+
+  // What the user is currently typing
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+
+  // What has actually been submitted
+  const [submittedSearch, setSubmittedSearch] = useState("");
+
   const [toast, setToast] = useState(null);
-  const [investorModal, setInvestorModal] = useState({ open: false, id: null });
-  const [paymentModal, setPaymentModal] = useState({ open: false, id: null });
+
+  const [investorModal, setInvestorModal] = useState({
+    open: false,
+    id: null,
+  });
+
+  const [paymentModal, setPaymentModal] = useState({
+    open: false,
+    id: null,
+  });
 
   const showToast = useCallback((message, type = "success") => {
-    setToast({ id: Date.now(), message, type });
+    setToast({
+      id: Date.now(),
+      message,
+      type,
+    });
   }, []);
 
-  const loadDashboard = useCallback(async () => {
-    const data = await getDashboard();
-    setDashboard(data);
-  }, []);
+  // =====================================================
+  // Dashboard Cache
+  // =====================================================
 
-  const loadInvestors = useCallback(async (query = "") => {
-    const data = await getInvestors(query);
-    setInvestors(data);
-  }, []);
+  const {
+    data: dashboard = null,
+    isLoading: isDashboardLoading,
+    isError: isDashboardError,
+    error: dashboardError,
+  } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+  });
 
-  const refreshData = useCallback(async () => {
-    await Promise.all([loadDashboard(), loadInvestors(search)]);
-  }, [loadDashboard, loadInvestors, search]);
+  // =====================================================
+  // Investors Cache
+  // =====================================================
 
-  useEffect(() => {
-    let active = true;
+  const {
+    data: investors = [],
+    isLoading: isInvestorsLoading,
+    isError: isInvestorsError,
+    error: investorsError,
+  } = useQuery({
+    queryKey: ["investors", submittedSearch],
+    queryFn: () => getInvestors(submittedSearch),
+  });
 
-    async function load() {
-      try {
-        setIsLoading(true);
-        const [dashboardData, investorData] = await Promise.all([
-          getDashboard(),
-          getInvestors(""),
-        ]);
+  const isLoading = isDashboardLoading || isInvestorsLoading;
 
-        if (!active) return;
-        setDashboard(dashboardData);
-        setInvestors(investorData);
-      } catch (error) {
-        if (!active) return;
-        console.error(error);
-        showToast(error.message, "error");
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    }
+  // =====================================================
+  // Error Handling
+  // =====================================================
 
-    load();
-    return () => {
-      active = false;
-    };
-  }, [showToast]);
-
-  async function handleSearch() {
-    try {
-      await loadInvestors(search);
-    } catch (error) {
-      console.error(error);
-      showToast(error.message, "error");
-    }
+  if (isDashboardError) {
+    console.error(dashboardError);
   }
 
-  async function handleClear() {
+  if (isInvestorsError) {
+    console.error(investorsError);
+  }
+
+  // =====================================================
+  // Search
+  // =====================================================
+
+  function handleSearch() {
+    setSubmittedSearch(search.trim());
+  }
+
+  function handleClear() {
     setSearch("");
-    try {
-      await loadInvestors("");
-    } catch (error) {
-      console.error(error);
-      showToast(error.message, "error");
-    }
+    setSubmittedSearch("");
   }
+
+  // =====================================================
+  // Refresh Data
+  // =====================================================
+
+  async function refreshData() {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      }),
+
+      queryClient.invalidateQueries({
+        queryKey: ["investors"],
+      }),
+    ]);
+  }
+
+  // =====================================================
+  // Investor Actions
+  // =====================================================
 
   function openNew() {
-    setInvestorModal({ open: true, id: null });
+    setInvestorModal({
+      open: true,
+      id: null,
+    });
   }
 
   function openEdit(id) {
@@ -97,7 +133,11 @@ export default function DashboardPage({ onLogout }) {
       showToast("Investor ID is missing.", "error");
       return;
     }
-    setInvestorModal({ open: true, id });
+
+    setInvestorModal({
+      open: true,
+      id,
+    });
   }
 
   function openPayments(id) {
@@ -105,7 +145,11 @@ export default function DashboardPage({ onLogout }) {
       showToast("Investor ID is missing.", "error");
       return;
     }
-    setPaymentModal({ open: true, id });
+
+    setPaymentModal({
+      open: true,
+      id,
+    });
   }
 
   async function handleDelete(id) {
@@ -120,10 +164,13 @@ export default function DashboardPage({ onLogout }) {
 
     try {
       await deleteInvestor(id);
+
       await refreshData();
+
       showToast("Investor deleted successfully.");
     } catch (error) {
       console.error(error);
+
       showToast(error.message, "error");
     }
   }
@@ -168,7 +215,12 @@ export default function DashboardPage({ onLogout }) {
       <InvestorModal
         open={investorModal.open}
         investorId={investorModal.id}
-        onClose={() => setInvestorModal({ open: false, id: null })}
+        onClose={() =>
+          setInvestorModal({
+            open: false,
+            id: null,
+          })
+        }
         onSaved={async () => {
           await refreshData();
         }}
@@ -178,7 +230,12 @@ export default function DashboardPage({ onLogout }) {
       <PaymentModal
         open={paymentModal.open}
         investorId={paymentModal.id}
-        onClose={() => setPaymentModal({ open: false, id: null })}
+        onClose={() =>
+          setPaymentModal({
+            open: false,
+            id: null,
+          })
+        }
         onChanged={refreshData}
         showToast={showToast}
       />
