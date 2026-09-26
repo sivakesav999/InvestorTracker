@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
 import Modal from "./Modal.jsx";
 import { getInvestor, savePayment, saveAllPayments } from "../services/api.js";
+import { useState, useEffect } from "react";
 
 function money(value) {
   return new Intl.NumberFormat("en-IN", {
@@ -8,6 +8,10 @@ function money(value) {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
+}
+
+function roundMoney(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
 }
 
 function formatDate(value) {
@@ -124,8 +128,8 @@ export default function PaymentModal({
       return;
     }
 
-    const amountDue = Number(payment.amountDue) || 0;
-    const amountPaid = Number(payment.amountPaid) || 0;
+    const amountDue = roundMoney(payment.amountDue);
+    const amountPaid = roundMoney(payment.amountPaid);
 
     if (amountPaid < 0) {
       showToast("Paid amount cannot be negative.", "error");
@@ -184,8 +188,8 @@ export default function PaymentModal({
         return false;
       }
 
-      const amountDue = Number(payment.amountDue) || 0;
-      const amountPaid = Number(payment.amountPaid) || 0;
+      const amountDue = roundMoney(payment.amountDue);
+      const amountPaid = roundMoney(payment.amountPaid);
 
       return amountPaid < 0 || amountPaid > amountDue;
     });

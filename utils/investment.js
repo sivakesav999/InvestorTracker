@@ -15,25 +15,13 @@ export const schemes = [
 export function schemeInfo(scheme) {
   switch (scheme) {
     case "20 Months - 10%":
-      return {
-        months: 20,
-        rate: 0.1,
-        maturityMultiplier: null,
-      };
+      return { months: 20, rate: 0.1, maturityMultiplier: null };
 
     case "12 Months - 2%":
-      return {
-        months: 12,
-        rate: 0.02,
-        maturityMultiplier: 2,
-      };
+      return { months: 12, rate: 0.02, maturityMultiplier: 2 };
 
     case "36 Months - 2.5%":
-      return {
-        months: 36,
-        rate: 0.025,
-        maturityMultiplier: 2,
-      };
+      return { months: 36, rate: 0.025, maturityMultiplier: 2 };
 
     default:
       throw new Error(`Unknown scheme: ${scheme}`);
@@ -41,44 +29,27 @@ export function schemeInfo(scheme) {
 }
 
 // --------------------------------------------------
+// Money Helper
+// --------------------------------------------------
+
+function roundMoney(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+// --------------------------------------------------
 // Amount / Commission Rules
 // --------------------------------------------------
 
-/*
-  The amount stored for an investor is the TOTAL AMOUNT
-  RECEIVED from the investor.
-
-  Every ₹1,10,000 received is split as:
-
-    ₹1,00,000 -> Actual Investment
-    ₹10,000   -> Upfront Commission
-
-  Therefore:
-
-    Actual Investment = Received Amount / 1.10
-
-    Upfront Commission = Received Amount - Actual Investment
-
-  Examples:
-
-    ₹1,10,000 -> ₹1,00,000 actual + ₹10,000 commission
-
-    ₹2,20,000 -> ₹2,00,000 actual + ₹20,000 commission
-
-    ₹5,50,000 -> ₹5,00,000 actual + ₹50,000 commission
-*/
-
 export function getActualInvestment(receivedAmount) {
   const amount = Number(receivedAmount) || 0;
-
-  return amount / 1.1;
+  return roundMoney(amount / 1.1);
 }
 
 export function getUpfrontCommission(receivedAmount) {
   const amount = Number(receivedAmount) || 0;
   const actualInvestment = getActualInvestment(amount);
 
-  return amount - actualInvestment;
+  return roundMoney(amount - actualInvestment);
 }
 
 // --------------------------------------------------
@@ -94,9 +65,42 @@ export function parseDate(dateString) {
 export function addMonths(dateString, months) {
   const [year, month, day] = String(dateString).split("-").map(Number);
 
-  const date = new Date(year, month - 1, day);
+  /*
+   * Start from the first day of the original month.
+   *
+   * This prevents JavaScript from overflowing dates such as:
+   *
+   * 30-01-2025 + 1 month
+   *        ↓
+   * 30-02-2025
+   *        ↓
+   * 02-03-2025   ❌
+   *
+   * Instead, the day is clamped to the last valid day
+   * of the target month:
+   *
+   * 30-01-2025 + 1 month
+   *        ↓
+   * 28-02-2025   ✅
+   */
+
+  const date = new Date(year, month - 1, 1);
 
   date.setMonth(date.getMonth() + months);
+
+  const targetYear = date.getFullYear();
+  const targetMonth = date.getMonth();
+
+  // Last valid day of the target month.
+  const lastDayOfTargetMonth = new Date(
+    targetYear,
+    targetMonth + 1,
+    0,
+  ).getDate();
+
+  // Keep the original day when possible.
+  // Otherwise use the last day of the target month.
+  date.setDate(Math.min(day, lastDayOfTargetMonth));
 
   const resultYear = date.getFullYear();
   const resultMonth = String(date.getMonth() + 1).padStart(2, "0");
@@ -106,15 +110,11 @@ export function addMonths(dateString, months) {
 }
 
 export function formatDate(dateString) {
-  if (!dateString) {
-    return "";
-  }
+  if (!dateString) return "";
 
   const [year, month, day] = String(dateString).split("-").map(Number);
 
-  if (!year || !month || !day) {
-    return dateString;
-  }
+  if (!year || !month || !day) return dateString;
 
   return `${String(day).padStart(2, "0")}-${String(month).padStart(
     2,
@@ -126,65 +126,25 @@ export function formatDate(dateString) {
 // Investment Date Rules
 // --------------------------------------------------
 
-/*
-  FINAL BUSINESS RULE
-  -------------------
-
-  Investment made from 1st to 15th:
-
-    - Normal selected scheme rate applies
-    - Normal monthly commission applies
-    - Normal scheme tenure
-
-  Investment made from 16th to 25th:
-
-    - 2% payout applies for the investment month
-    - Normal monthly commission applies
-    - Normal scheme tenure
-    - From the following month, the selected scheme's
-      normal rate applies
-
-  Investment made after 25th:
-
-    - No payment in investment month
-    - No monthly commission in investment month
-    - Normal selected scheme payment starts next month
-    - Effective tenure increases by 1 month
-*/
-
-// --------------------------------------------------
-// Investment Date Classification
-// --------------------------------------------------
-
 export function getInvestmentDateCategory(investmentDate) {
   const [, , day] = String(investmentDate).split("-").map(Number);
 
+  // 1st - 15th
   if (day >= 1 && day <= 15) {
     return "NORMAL";
   }
 
+  // 16th - 25th
   if (day >= 16 && day <= 25) {
     return "SPECIAL_2_PERCENT";
   }
 
+  // 26th - 31st
   return "NO_PAYMENT";
 }
 
-// --------------------------------------------------
-// Backward-Compatible Helper
-// --------------------------------------------------
-
-/*
-  Existing routes may still import isAfter15th().
-
-  We keep the function so existing code does not break,
-  but its meaning is now:
-
-    "investment is after the 25th"
-
-  This can be renamed later when we update the routes.
-*/
-
+// Backward-compatible helper.
+// Existing routes may still import isAfter15th().
 export function isAfter15th(investmentDate) {
   return getInvestmentDateCategory(investmentDate) === "NO_PAYMENT";
 }
@@ -195,12 +155,6 @@ export function isAfter15th(investmentDate) {
 
 export function getEffectiveTenure(investmentDate, scheme) {
   const info = schemeInfo(scheme);
-
-  /*
-    Only investments after the 25th receive an
-    additional tenure month because there is no
-    payment during the investment month.
-  */
 
   return info.months + (isAfter15th(investmentDate) ? 1 : 0);
 }
@@ -220,22 +174,14 @@ export function getMonthlyPayout(
   monthNo,
 ) {
   const info = schemeInfo(scheme);
-
   const actualInvestment = getActualInvestment(receivedAmount);
 
   const dateCategory = getInvestmentDateCategory(investmentDate);
 
   // ------------------------------------------------
-  // Investment date: 26th to 31st
+  // 26th - 31st
+  // No payment in investment month.
   // ------------------------------------------------
-
-  /*
-    No payment in the investment month.
-
-    This is NOT a complimentary payment.
-
-    It is a real zero-payment month.
-  */
 
   if (monthNo === 1 && dateCategory === "NO_PAYMENT") {
     return {
@@ -246,46 +192,24 @@ export function getMonthlyPayout(
   }
 
   // ------------------------------------------------
-  // Investment date: 16th to 25th
+  // 16th - 25th
+  // 2% payout only for investment month.
   // ------------------------------------------------
-
-  /*
-    For the investment month only, 2% applies
-    regardless of the selected scheme.
-
-    Example:
-
-      ₹1,00,000 actual investment
-
-      Scheme 1 -> ₹2,000
-      Scheme 2 -> ₹2,000
-      Scheme 3 -> ₹2,000
-  */
 
   if (monthNo === 1 && dateCategory === "SPECIAL_2_PERCENT") {
     return {
-      amount: actualInvestment * 0.02,
+      amount: roundMoney(actualInvestment * 0.02),
       complimentary: false,
       noPayment: false,
     };
   }
 
   // ------------------------------------------------
-  // Normal scheme payout
+  // Normal selected scheme rate.
   // ------------------------------------------------
 
-  /*
-    For:
-
-      - 1st to 15th investment dates
-      - Month 2 onward for 16th to 25th
-      - Month 2 onward for after-25th investments
-
-    the selected scheme's normal rate applies.
-  */
-
   return {
-    amount: actualInvestment * info.rate,
+    amount: roundMoney(actualInvestment * info.rate),
     complimentary: false,
     noPayment: false,
   };
@@ -309,7 +233,7 @@ export function paymentDetails(
   );
 
   return {
-    amountDue: payout.amount,
+    amountDue: roundMoney(payout.amount),
     isComplimentary: payout.complimentary,
     noPayment: payout.noPayment,
   };
@@ -340,9 +264,7 @@ export function monthsCompleted(investmentDate) {
 
 export function nextInvestorCode(Investor) {
   return Investor.findOne()
-    .sort({
-      investorCode: -1,
-    })
+    .sort({ investorCode: -1 })
     .lean()
     .then((last) => {
       if (!last?.investorCode) {
@@ -420,26 +342,18 @@ export function investorView(row) {
 
   const info = schemeInfo(row.scheme);
 
-  /*
-    IMPORTANT:
-
-    row.amount is the TOTAL AMOUNT RECEIVED.
-
-    Scheme calculations use only the ACTUAL INVESTMENT.
-  */
-
   const actualInvestment = getActualInvestment(row.amount);
 
   const upfrontCommission = getUpfrontCommission(row.amount);
 
-  const monthlyPayout = actualInvestment * info.rate;
+  const monthlyPayout = roundMoney(actualInvestment * info.rate);
 
   const maturityDate = addMonths(row.investmentDate, totalMonths);
 
   const maturityAmount =
     info.maturityMultiplier === null
       ? 0
-      : actualInvestment * info.maturityMultiplier;
+      : roundMoney(actualInvestment * info.maturityMultiplier);
 
   return {
     ...row,
@@ -452,14 +366,8 @@ export function investorView(row) {
 
     totalMonths,
 
-    /*
-      Original received amount remains visible.
-    */
     amount: Number(row.amount),
 
-    /*
-      New calculated values.
-    */
     actualInvestment,
 
     upfrontCommission,
@@ -470,10 +378,6 @@ export function investorView(row) {
 
     maturityAmount,
 
-    /*
-      Keep this name for compatibility with
-      existing frontend code.
-    */
     initialCommission: upfrontCommission,
 
     tenureCompleted,
